@@ -51,4 +51,32 @@ def change_rule_for_all(rule_key: str, new_value: str) -> dict | None:
     except Exception as e:
         return {"message": "Ошибка при подключении к API", "details": str(e)}
 
-# добавить остальные
+def validate_latex_document(tex_path: str, sty_path: str, doc_type: str):
+    try:
+        with open(tex_path, "rb") as tex_file, open(sty_path, "rb") as sty_file:
+            files = {
+                "tex_file": ("document.tex", tex_file, "application/x-tex"),
+                "sty_file": ("style.sty", sty_file, "application/x-tex"),
+            }
+            data = {"doc_type": doc_type}
+            response = requests.post(f"{API_URL}/api/documents/validate/latex", files=files, data=data)
+            response.raise_for_status()
+            logger.info(f"LaTeX-файл успешно проверен для типа {doc_type}")
+            return response.json()
+    except Exception as e:
+        logger.error(f"Ошибка при проверке LaTeX-файла: {e}")
+        return None
+
+
+def validate_docx_document(file_path: str, doc_type: str):
+    try:
+        with open(file_path, "rb") as file:
+            files = {"file": ("document.docx", file, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+            data = {"doc_type": doc_type}
+            response = requests.post(f"{API_URL}/api/documents/validate/single_file", files=files, data=data)
+            response.raise_for_status()
+            logger.info(f"DOCX-файл успешно проверен для типа {doc_type}")
+            return response.json()
+    except Exception as e:
+        logger.error(f"Ошибка при проверке DOCX-файла: {e}")
+        return None

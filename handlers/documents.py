@@ -1,50 +1,105 @@
-# === handlers/documents.py ===
-from aiogram import Router, F, types
-from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, BufferedInputFile
+from aiogram import Router, types, F
 from aiogram.filters import Command
-from services.api import get_doc_options
-from utils.helpers import is_reviewer, upload_file_and_check_single, upload_latex_and_check
+from db import get_user_role, STUDENT_ROLE, REVIEWER_ROLE
+from services.api import validate_docx_document, validate_latex_document
+from logger import logger
+import os
 
 router = Router()
 
+user_documents = {}  # Временное хранилище для пользователей, загружающих LaTeX-файлы
 
-@router.message(Command("documents"))
-async def cmd_documents(message: Message):
-    options = get_doc_options()
-    if not options:
-        await message.answer("Не удалось получить список доступных типов документов.")
+
+@router.message(Command("check_docx"))
+async def handle_docx_check(message: types.Message):
+    user_id = message.from_user.id
+    logger.debug(f"📄 Пользователь {user_id} начал проверку .docx документа")
+
+    if not message.reply_to_message or not message.reply_to_message.document:
+        await message.answer("Пожалуйста, прикрепите .docx файл в ответ на эту команду.")
         return
 
-    doc_types = "\n".join(f"- {opt}" for opt in options)
-    await message.answer(f"Доступные типы документов:\n{doc_types}")
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("Использование: /check_docx <тип_документа> (в ответ на файл)")
+        return
+
+    doc_type = parts[1]
+    file = message.reply_to_message.document
+
+    doc_path = f"/tmp/{file.file_id}.docx"
+    await file.download(destination=doc_path)
+    logger.debug(f"📥 Файл {file.file_name} сохранён как {doc_path}")
+
+    result = validate_docx_document(doc_path, doc_type)
+    os.remove(doc_path)
+
+    if result:
+        await message.answer(result.get("message", "Проверка завершена."))
+        if "errors" in result:
+            await message.answer("Ошибки:\n" + "\n".join(result["errors"]))
+    else:
+        await message.answer("Ошибка при проверке документа.")
+
+
+@router.message(Command("check_latex"))
+async def handle_latex_check(message: types.Message):
+    user_id = message.from_user.id
+    logger.debug(f"📄 Пользователь {user_id} начал проверку LaTeX документа")
+
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("Использование: /check_latex <тип_документа>")
+        return
+
+    doc_type = parts[1]
+    user_documents[user_id] = {"doc_type": doc_type}
+    await message.answer("Пришлите .tex файл.")
 
 
 @router.message(F.document)
-async def handle_document_upload(message: Message, state: FSMContext):
+async def handle_latex_files(message: types.Message):
     user_id = message.from_user.id
-    document = message.document
 
-    if document.file_name.endswith(".docx"):
-        await message.answer("Загружаем и проверяем .docx документ...")
-        result = await upload_file_and_check_single(document, user_id)
-        await message.answer(result)
+    if user_id not in user_documents:
+        return  # Игнорируем документы, если пользователь не начал /check_latex
 
-    elif document.file_name.endswith(".tex"):
-        await state.update_data(tex_file=document)
-        await message.answer("Файл .tex загружен. Теперь загрузите файл .sty")
+    file = message.document
+    filename = file.file_name
 
-    elif document.file_name.endswith(".sty"):
-        data = await state.get_data()
-        tex_file = data.get("tex_file")
-        if not tex_file:
-            await message.answer("Сначала загрузите .tex файл")
+    if filename.endswith(".tex"):
+        path = f"/tmp/{file.file_id}.tex"
+        await file.download(destination=path)
+        user_documents[user_id]["tex"] = path
+        logger.debug(f"📥 Получен .tex файл от {user_id}")
+        await message.answer("Теперь отправьте .sty файл.")
+    elif filename.endswith(".sty"):
+        path = f"/tmp/{file.file_id}.sty"
+        await file.download(destination=path)
+        user_documents[user_id]["sty"] = path
+        logger.debug(f"📥 Получен .sty файл от {user_id}")
+
+        doc_type = user_documents[user_id].get("doc_type")
+        tex_path = user_documents[user_id].get("tex")
+        sty_path = user_documents[user_id].get("sty")
+
+        if not tex_path or not sty_path or not doc_type:
+            await message.answer("Ошибка: не хватает одного из файлов.")
             return
 
-        await message.answer("Загружаем и проверяем LaTeX-документ...")
-        result = await upload_latex_and_check(tex_file, document, user_id)
-        await message.answer(result)
-        await state.clear()
+        result = validate_latex_document(tex_path, sty_path, doc_type)
 
-    else:
-        await message.answer("Неподдерживаемый формат файла. Поддерживаются: .docx, .tex, .sty")
+        os.remove(tex_path)
+        os.remove(sty_path)
+        user_documents.pop(user_id, None)
+
+        if result:
+            await message.answer(result.get("message", "Проверка завершена."))
+            if "errors" in result:
+                await message.answer("Ошибки:\n" + "\n".join(result["errors"]))
+        else:
+            await message.answer("Ошибка при проверке документа.")
+
+
+def register(dp):
+    dp.include_router(router)
