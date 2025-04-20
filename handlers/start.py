@@ -1,7 +1,6 @@
-
 from aiogram import Router, types
 from aiogram.filters import Command
-from db import get_user_role, set_user_role, REVIEWER_ROLE, STUDENT_ROLE
+from db import get_user_role, set_user_role, REVIEWER_ROLE
 from config import SECRET_CODE
 from logger import logger
 
@@ -12,13 +11,24 @@ async def start(message: types.Message):
     user_id = message.from_user.id
     role = get_user_role(user_id)
     logger.info(f"👤 Пользователь {user_id} начал сессию как {role}.")
+
+    commands = [
+        "/types — показать типы документов",
+        "/rules <тип_документа> — показать правила",
+        "/check_docx — проверить .docx документ",
+        "/check_latex — проверить .tex и .sty файлы",
+    ]
+
+    if role == REVIEWER_ROLE:
+        commands.append("/change_rule <тип> <ключ> <значение> — изменить правило")
+        commands.append("/change_rule_for_all <ключ> <значение> — изменить правило для всех типов")
+
+    commands.append("/set_reviewer <секретный_код> — получить роль нормоконтролера")
+
     await message.answer(
         f"Привет! Ваша текущая роль: {role}.\n"
-        "Доступные команды:\n"
-        "/types — показать типы документов\n"
-        "/rules <тип_документа> — показать правила\n"
-        "/change_rule <тип> <ключ> <значение> — изменить правило (только нормоконтролерам)\n"
-        "/set_reviewer <секретный_код> — получить роль нормоконтролера"
+        "Доступные команды:\n" +
+        "\n".join(commands)
     )
 
 
