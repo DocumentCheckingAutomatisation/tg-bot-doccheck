@@ -21,7 +21,14 @@ def get_user_role(user_id: int) -> str:
         cursor = conn.cursor()
         cursor.execute("SELECT role FROM roles WHERE user_id = ?", (user_id,))
         result = cursor.fetchone()
-        return result[0] if result else STUDENT_ROLE
+        if result:
+            return result[0]
+        else:
+            # Если пользователь не найден, добавим как студента
+            cursor.execute("INSERT INTO roles (user_id, role) VALUES (?, ?)", (user_id, STUDENT_ROLE))
+            conn.commit()
+            return STUDENT_ROLE
+
 
 def set_user_role(user_id: int, role: str):
     with sqlite3.connect(DB_NAME) as conn:
@@ -29,28 +36,3 @@ def set_user_role(user_id: int, role: str):
         cursor.execute("REPLACE INTO roles (user_id, role) VALUES (?, ?)", (user_id, role))
         conn.commit()
 
-
-# import sqlite3
-#
-# conn = sqlite3.connect("bot_users.db")
-# cursor = conn.cursor()
-#
-# cursor.execute("""
-# CREATE TABLE IF NOT EXISTS users (
-#     user_id INTEGER PRIMARY KEY,
-#     role TEXT DEFAULT 'student'
-# )
-# """)
-# conn.commit()
-#
-# def get_user_role(user_id: int) -> str:
-#     cursor.execute("SELECT role FROM users WHERE user_id = ?", (user_id,))
-#     result = cursor.fetchone()
-#     return result[0] if result else "student"
-#
-# def set_user_role(user_id: int, role: str):
-#     cursor.execute("""
-#     INSERT INTO users (user_id, role) VALUES (?, ?)
-#     ON CONFLICT(user_id) DO UPDATE SET role = excluded.role
-#     """, (user_id, role))
-#     conn.commit()

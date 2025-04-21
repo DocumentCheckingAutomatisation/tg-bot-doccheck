@@ -6,12 +6,7 @@ from logger import logger
 
 router = Router()
 
-@router.message(Command("start"))
-async def start(message: types.Message):
-    user_id = message.from_user.id
-    role = get_user_role(user_id)
-    logger.info(f"👤 Пользователь {user_id} начал сессию как {role}.")
-
+def get_available_commands(role: str) -> list[str]:
     commands = [
         "/types — показать типы документов",
         "/rules <тип_документа> — показать правила",
@@ -24,13 +19,21 @@ async def start(message: types.Message):
         commands.append("/change_rule_for_all <ключ> <значение> — изменить правило для всех типов")
 
     commands.append("/set_reviewer <секретный_код> — получить роль нормоконтролера")
+    return commands
+
+@router.message(Command("start"))
+async def start(message: types.Message):
+    user_id = message.from_user.id
+    role = get_user_role(user_id)
+    logger.info(f"👤 Пользователь {user_id} начал сессию как {role}.")
+
+    commands = get_available_commands(role)
 
     await message.answer(
         f"Привет! Ваша текущая роль: {role}.\n"
         "Доступные команды:\n" +
         "\n".join(commands)
     )
-
 
 @router.message(Command("set_reviewer"))
 async def set_reviewer(message: types.Message):
@@ -44,11 +47,17 @@ async def set_reviewer(message: types.Message):
         user_id = message.from_user.id
         set_user_role(user_id, REVIEWER_ROLE)
         logger.info(f"✅ Пользователю {user_id} присвоена роль: reviewer")
-        await message.answer("Вы успешно стали нормоконтролёром!")
+
+        commands = get_available_commands(REVIEWER_ROLE)
+        await message.answer(
+            "Вы успешно стали нормоконтролёром!\n"
+            "Теперь вам доступны следующие команды:\n" +
+            "\n".join(commands)
+        )
     else:
         logger.warning(f"❌ Пользователь {message.from_user.id} ввел неверный секретный код")
         await message.answer("Неверный секретный код.")
 
-
 def register(dp):
     dp.include_router(router)
+
