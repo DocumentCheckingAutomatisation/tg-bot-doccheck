@@ -110,7 +110,7 @@ async def feedback(message: types.Message):
     feedback_text = text_parts[1]
 
     # Логирование
-    logger.info(f"✉️ Отзыв от {user_id}: {feedback_text}")
+    logger.feedback(f"✉️ Отзыв от {user_id}: {feedback_text}")
 
     # Отправка админу
     try:
