@@ -31,7 +31,7 @@ def get_available_commands(role: str) -> list[str]:
 @router.message(Command("start"))
 async def start(message: types.Message):
     user_id = message.from_user.id
-    role = get_user_role(user_id)
+    role = get_user_role(user_id, message.from_user.username)
     logger.info(f"👤 Пользователь {user_id} начал сессию как {role}.")
 
     commands = get_available_commands(role)
@@ -68,13 +68,13 @@ async def set_reviewer(message: types.Message):
 @router.message(Command("my_role"))
 async def my_role(message: types.Message):
     user_id = message.from_user.id
-    role = get_user_role(user_id)
+    role = get_user_role(user_id, message.from_user.username)
     await message.answer(f"Ваша текущая роль: {role}")
 
 @router.message(Command("help"))
 async def help_command(message: types.Message):
     user_id = message.from_user.id
-    role = get_user_role(user_id)
+    role = get_user_role(user_id, message.from_user.username)
     commands = get_available_commands(role)
     await message.answer("Справка по доступным командам:\n" + "\n".join(commands))
 
