@@ -1,4 +1,5 @@
 import requests
+
 from config import API_URL
 from logger import logger
 
@@ -38,6 +39,7 @@ def change_rule(doc_type: str, rule_key: str, new_value: str):
         logger.error(f"Ошибка при изменении правила: {e}")
         return None
 
+
 def change_rule_for_all(rule_key: str, new_value: str) -> dict | None:
     try:
         response = requests.post(
@@ -50,6 +52,7 @@ def change_rule_for_all(rule_key: str, new_value: str) -> dict | None:
             return {"message": f"Ошибка {response.status_code}", "details": response.text}
     except Exception as e:
         return {"message": "Ошибка при подключении к API", "details": str(e)}
+
 
 def validate_latex_document(tex_path: str, sty_path: str, doc_type: str):
     try:
@@ -71,7 +74,8 @@ def validate_latex_document(tex_path: str, sty_path: str, doc_type: str):
 def validate_docx_document(file_path: str, doc_type: str):
     try:
         with open(file_path, "rb") as file:
-            files = {"file": ("document.docx", file, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+            files = {"file": (
+            "document.docx", file, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
             data = {"doc_type": doc_type}
             response = requests.post(f"{API_URL}/api/documents/validate/single_file", files=files, data=data)
             response.raise_for_status()

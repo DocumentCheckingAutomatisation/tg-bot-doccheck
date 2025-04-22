@@ -3,9 +3,11 @@ import logging
 FEEDBACK_LEVEL_NUM = 25
 logging.addLevelName(FEEDBACK_LEVEL_NUM, "FEEDBACK")
 
+
 def feedback(self, message, *args, **kws):
     if self.isEnabledFor(FEEDBACK_LEVEL_NUM):
         self._log(FEEDBACK_LEVEL_NUM, message, args, **kws)
+
 
 logging.Logger.feedback = feedback
 

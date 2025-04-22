@@ -1,9 +1,10 @@
+import os
+
 from aiogram import Router, types, F
 from aiogram.filters import Command
-from db import get_user_role, STUDENT_ROLE, REVIEWER_ROLE
-from services.api import validate_docx_document, validate_latex_document
+
 from logger import logger
-import os
+from services.api import validate_docx_document, validate_latex_document
 
 router = Router()
 

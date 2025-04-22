@@ -1,10 +1,12 @@
-from aiogram import Router, types, F
+from aiogram import Router, types
 from aiogram.filters import Command
+
 from db import get_user_role, REVIEWER_ROLE
-from services.api import get_doc_options, get_rules, change_rule, change_rule_for_all
 from logger import logger
+from services.api import get_doc_options, get_rules, change_rule, change_rule_for_all
 
 router = Router()
+
 
 @router.message(Command("types"))
 async def available_types(message: types.Message):
@@ -85,5 +87,3 @@ async def handle_change_rule_for_all(message: types.Message):
 
 def register(dp):
     dp.include_router(router)
-
-

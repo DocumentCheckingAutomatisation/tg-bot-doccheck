@@ -11,10 +11,11 @@
 #     └── rules.py         # Получение и изменение правил
 
 from aiogram import Bot, Dispatcher
+
 from config import BOT_TOKEN
-from logger import logger
 from db import init_db
 from handlers import start, documents, rules
+from logger import logger
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
