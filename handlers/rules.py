@@ -13,7 +13,7 @@ async def available_types(message: types.Message):
     logger.debug(f"📩 Пользователь {message.from_user.id} запросил типы документов")
     options = get_doc_options()
     if options:
-        text = "\n".join(options)
+        text = "\n".join(opt["name"] for opt in options)
         await message.answer(f"Доступные типы документов:\n{text}")
     else:
         await message.answer("Ошибка при получении типов документов.")
