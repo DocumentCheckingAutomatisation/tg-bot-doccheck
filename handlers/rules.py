@@ -1,3 +1,5 @@
+import json
+
 from aiogram import Router, types
 from aiogram.filters import Command
 
@@ -27,12 +29,27 @@ async def show_rules(message: types.Message):
         return
     doc_type = parts[1]
     logger.debug(f"📩 Пользователь {message.from_user.id} запросил правила для {doc_type}")
+
     rules = get_rules(doc_type)
-    if rules:
-        rules_text = "\n".join(f"{k}: {v}" for k, v in rules.items())
-        await message.answer(f"Правила для {doc_type}:\n{rules_text}")
-    else:
+
+    if not rules:
         await message.answer("Ошибка при получении правил.")
+        return
+
+    pretty_rules = json.dumps(rules, indent=2, ensure_ascii=False)
+    # Ограничение Telegram: 4096 символов в одном сообщении
+    max_length = 4000
+
+    if len(pretty_rules) > max_length:
+        chunks = [pretty_rules[i:i + max_length] for i in range(0, len(pretty_rules), max_length)]
+        await message.answer(f"*Правила для типа:* `{doc_type}`", parse_mode="Markdown")
+        for chunk in chunks:
+            await message.answer(f"```json\n{chunk}\n```", parse_mode="Markdown")
+    else:
+        await message.answer(
+            f"*Правила для типа:* `{doc_type}`\n```json\n{pretty_rules}\n```",
+            parse_mode="Markdown"
+        )
 
 
 @router.message(Command("change_rule"))
