@@ -23,6 +23,13 @@ VALID_TYPES = ["diploma", "course_work", "practice_report"]
 def get_valid_types_str():
     return ", ".join(doc_type.replace("_", "_") for doc_type in VALID_TYPES)
 
+async def check_file_size(message: Message, max_size_mb: int = 25) -> bool:
+    if message.document.file_size > max_size_mb * 1024 * 1024:
+        await message.answer(f"❌ Файл слишком большой. Максимальный размер — {max_size_mb} МБ.")
+        return False
+    return True
+
+
 @router.message(Command("check_docx"))
 async def handle_docx_check(message: Message, state: FSMContext):
     parts = message.text.split(maxsplit=1)
@@ -48,6 +55,9 @@ async def handle_docx_file(message: Message, state: FSMContext):
     if not message.document.file_name.endswith(".docx"):
         await message.answer("Пожалуйста, отправьте файл с расширением .docx")
         return
+    if not await check_file_size(message):
+        return
+
     await state.update_data(file=message.document)
 
     data = await state.get_data()
@@ -63,6 +73,7 @@ async def handle_docx_file(message: Message, state: FSMContext):
         # Тип документа не указан — спрашиваем его
         await message.answer(f"Теперь укажите тип документа: {get_valid_types_str()}")
         await state.set_state(DocxCheck.waiting_for_type)
+
 
 @router.message(DocxCheck.waiting_for_type)
 async def handle_docx_type(message: Message, state: FSMContext):
@@ -104,6 +115,9 @@ async def handle_latex_tex(message: Message, state: FSMContext):
     if not message.document.file_name.endswith(".tex"):
         await message.answer("Пожалуйста, отправьте файл с расширением .tex")
         return
+    if not await check_file_size(message):
+        return
+
     await state.update_data(tex=message.document)
     await message.answer("Теперь отправьте .sty файл.")
     await state.set_state(LatexCheck.waiting_for_sty)
@@ -113,6 +127,9 @@ async def handle_latex_sty(message: Message, state: FSMContext):
     if not message.document.file_name.endswith(".sty"):
         await message.answer("Пожалуйста, отправьте файл с расширением .sty")
         return
+    if not await check_file_size(message):
+        return
+
     await state.update_data(sty=message.document)
 
     data = await state.get_data()
