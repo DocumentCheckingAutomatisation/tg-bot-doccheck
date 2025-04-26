@@ -12,8 +12,8 @@ def get_available_commands(role: str) -> list[str]:
     commands = [
         "/types — показать типы документов",
         "/rules <тип_документа> — показать правила",
-        "/check_docx — проверить .docx документ",
-        "/check_latex — проверить .tex и .sty файлы",
+        "/check_docx <тип_документа> — проверить .docx документ",
+        "/check_latex <тип_документа> — проверить .tex и .sty файлы",
         "/my_role — показать текущую роль",
         "/help — список доступных команд",
         "/info — информация о боте",
