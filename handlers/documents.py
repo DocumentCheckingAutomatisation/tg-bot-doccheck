@@ -11,7 +11,7 @@ from services.api import validate_docx_document, validate_latex_document
 
 router = Router()
 
-MAX_STATE_LIFETIME = 10  # 5 минут
+MAX_STATE_LIFETIME = 300
 
 class DocxCheck(StatesGroup):
     waiting_for_file = State()
@@ -40,6 +40,31 @@ async def is_state_expired(state: FSMContext) -> bool:
         return False
     now = datetime.now().timestamp()
     return (now - start_time) > MAX_STATE_LIFETIME
+
+
+def format_validation_result(result: dict) -> str:
+    valid = "✅ Да" if result.get("valid", False) else "❌ Нет"
+
+    found = result.get("found")
+    if found:
+        found_list = "\n".join(f"- {item}" for item in found)
+    else:
+        found_list = "_Элементы не найдены._"
+
+    errors = result.get("errors")
+    if errors:
+        errors_list = "\n".join(f"- {error}" for error in errors)
+    else:
+        errors_list = "_Ошибок нет._"
+
+    formatted_text = (
+        f"📋 Результат проверки документа:\n\n"
+        f"*Правильность оформления:* {valid}\n\n"
+        f"*Найденные элементы:*\n{found_list}\n\n"
+        f"*Ошибки:*\n{errors_list}"
+    )
+    return formatted_text
+
 
 @router.message(Command("check_docx"))
 async def handle_docx_check(message: Message, state: FSMContext):
@@ -83,7 +108,9 @@ async def handle_docx_file(message: Message, state: FSMContext):
         file = await message.bot.download_file(file_obj.file_path)
 
         result = validate_docx_document(file, data["file"].file_name, data["doc_type"])
-        await message.answer(f"Результат проверки:\n{result}")
+        #await message.answer(f"Результат проверки:\n{result}")
+        await message.answer(format_validation_result(result), parse_mode="Markdown")
+
         await state.clear()
     else:
         await state.update_data(start_time=datetime.now().timestamp())
@@ -107,7 +134,9 @@ async def handle_docx_type(message: Message, state: FSMContext):
     file = await message.bot.download_file(file_obj.file_path)
 
     result = validate_docx_document(file, data["file"].file_name, doc_type)
-    await message.answer(f"Результат проверки:\n{result}")
+    #await message.answer(f"Результат проверки:\n{result}")
+    await message.answer(format_validation_result(result), parse_mode="Markdown")
+
     await state.clear()
 
 @router.message(Command("check_latex"))
@@ -198,7 +227,9 @@ async def process_latex_validation(message: Message, state: FSMContext):
         sty_file, data["sty"].file_name,
         data["doc_type"]
     )
-    await message.answer(f"Результат проверки:\n{result}")
+    await message.answer(format_validation_result(result), parse_mode="Markdown")
+
+    #await message.answer(f"Результат проверки:\n{result}")
     await state.clear()
 
 def register(dp):

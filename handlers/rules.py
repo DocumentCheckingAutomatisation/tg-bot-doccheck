@@ -12,7 +12,7 @@ from services.api import get_doc_options, get_rules, change_rule, change_rule_fo
 
 router = Router()
 
-MAX_STATE_LIFETIME = 10
+MAX_STATE_LIFETIME = 300
 
 
 class RuleStates(StatesGroup):
