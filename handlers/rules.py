@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from aiogram import Router, types
 from aiogram.filters import Command
@@ -11,6 +12,8 @@ from services.api import get_doc_options, get_rules, change_rule, change_rule_fo
 
 router = Router()
 
+MAX_STATE_LIFETIME = 10
+
 
 class RuleStates(StatesGroup):
     waiting_for_doc_type = State()
@@ -19,6 +22,14 @@ class RuleStates(StatesGroup):
 def get_valid_doc_types():
     options = get_doc_options()
     return [opt["name"].lower() for opt in options] if options else []
+
+async def is_state_expired(state: FSMContext) -> bool:
+    data = await state.get_data()
+    start_time = data.get("start_time")
+    if not start_time:
+        return False
+    now = datetime.now().timestamp()
+    return (now - start_time) > MAX_STATE_LIFETIME
 
 
 @router.message(Command("types"))
@@ -36,17 +47,22 @@ async def available_types(message: types.Message):
 async def show_rules(message: types.Message, state: FSMContext):
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
+        await state.update_data(start_time=datetime.now().timestamp())
         await message.answer("✏️ Укажите тип документа (например: diploma, course_work, practice_report).")
         await state.set_state(RuleStates.waiting_for_doc_type)
         return
 
     doc_type = parts[1].strip().lower().replace(" ", "_")
-
     await process_doc_type_internal(message, doc_type, state)
 
 
 @router.message(RuleStates.waiting_for_doc_type)
 async def process_doc_type(message: types.Message, state: FSMContext):
+    if await is_state_expired(state):
+        await message.answer("⌛ Слишком долго не было ответа. Начните заново командой /rules.")
+        await state.clear()
+        return
+
     doc_type = message.text.strip().lower().replace(" ", "_")
     await process_doc_type_internal(message, doc_type, state)
 
@@ -57,6 +73,7 @@ async def process_doc_type_internal(message: types.Message, doc_type: str, state
     if doc_type not in valid_types:
         ds = '\\'
         text = "❌ Неверный тип документа.\n\n*Доступные типы:*\n" + "\n".join(f"- {t.replace('_', f'{ds}_')}" for t in valid_types)
+        await state.update_data(start_time=datetime.now().timestamp())
         await message.answer(text, parse_mode="Markdown")
         await state.set_state(RuleStates.waiting_for_doc_type)
         return

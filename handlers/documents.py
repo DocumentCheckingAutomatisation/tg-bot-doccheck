@@ -65,7 +65,7 @@ async def handle_docx_check(message: Message, state: FSMContext):
 @router.message(DocxCheck.waiting_for_file, F.document)
 async def handle_docx_file(message: Message, state: FSMContext):
     if await is_state_expired(state):
-        await message.answer("⏰ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
+        await message.answer("⌛ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
         await state.clear()
         return
 
@@ -93,7 +93,7 @@ async def handle_docx_file(message: Message, state: FSMContext):
 @router.message(DocxCheck.waiting_for_type)
 async def handle_docx_type(message: Message, state: FSMContext):
     if await is_state_expired(state):
-        await message.answer("⏰ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
+        await message.answer("⌛ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
         await state.clear()
         return
 
@@ -134,7 +134,7 @@ async def handle_latex_check(message: Message, state: FSMContext):
 @router.message(LatexCheck.waiting_for_tex, F.document)
 async def handle_latex_tex(message: Message, state: FSMContext):
     if await is_state_expired(state):
-        await message.answer("⏰ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
+        await message.answer("⌛ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
         await state.clear()
         return
 
@@ -151,7 +151,7 @@ async def handle_latex_tex(message: Message, state: FSMContext):
 @router.message(LatexCheck.waiting_for_sty, F.document)
 async def handle_latex_sty(message: Message, state: FSMContext):
     if await is_state_expired(state):
-        await message.answer("⏰ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
+        await message.answer("⌛ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
         await state.clear()
         return
 
@@ -174,7 +174,7 @@ async def handle_latex_sty(message: Message, state: FSMContext):
 @router.message(LatexCheck.waiting_for_type)
 async def handle_latex_type(message: Message, state: FSMContext):
     if await is_state_expired(state):
-        await message.answer("⏰ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
+        await message.answer("⌛ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
         await state.clear()
         return
 
