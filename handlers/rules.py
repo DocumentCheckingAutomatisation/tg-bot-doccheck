@@ -114,14 +114,15 @@ async def update_rule(message: types.Message):
         await message.answer("🚫 У вас нет прав для изменения правил.")
         return
 
-    parts = message.text.split(maxsplit=3)
+    parts = message.text.split()
     if len(parts) < 4:
         await message.answer("Использование: /change_rule <тип_документа> <ключ> <новое_значение>")
         return
 
-    doc_type = parts[1].strip().lower().replace(" ", "_")
-    rule_key = parts[2]
-    new_value = parts[3]
+    # doc_type = parts[1].strip().lower().replace(" ", "_")
+    # rule_key = parts[2]
+    # new_value = parts[3]
+    doc_type, rule_key, new_value = parts[1], parts[2], " ".join(parts[3:])
 
     logger.debug(f"Нормоконтролер {user_id} меняет правило {rule_key} для {doc_type} на {new_value}")
     result = change_rule(doc_type, rule_key, new_value)

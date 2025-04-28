@@ -174,6 +174,7 @@ async def handle_latex_tex(message: Message, state: FSMContext):
         return
 
     await state.update_data(start_time=datetime.now().timestamp())
+    await state.update_data(tex=message.document)
     await state.set_state(LatexCheck.waiting_for_sty)
     await message.answer("Теперь отправьте .sty файл.")
 

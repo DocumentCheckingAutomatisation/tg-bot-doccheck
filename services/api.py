@@ -29,11 +29,13 @@ def get_rules(doc_type: str):
 
 
 def change_rule(doc_type: str, rule_key: str, new_value: str):
+    print(f"Изменение правила {rule_key} для {doc_type} на {new_value}")
     try:
         response = requests.post(
             f"{API_URL}/api/rules/update",
-            data={"doc_type": doc_type, "rule_key": rule_key, "new_value": new_value}
+            params={"doc_type": doc_type, "rule_key": rule_key, "new_value": new_value}
         )
+        print(response.status_code)
         response.raise_for_status()
         logger.info(f"Изменено правило {rule_key} для {doc_type} на {new_value}.")
         return response.json()
