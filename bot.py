@@ -4,6 +4,12 @@
 # ├── config.py            # Настройки и переменные окружения
 # ├── logger.py            # Логирование
 # ├── db.py                # Хранение ролей в памяти
+# ├── bot.log              # Логи
+# ├── roles.db             # БД
+# ├── requirements.txt     # Зависимости
+# ├── README.md            # Документация
+# ├── .env                 # Переменные окружения
+# ├── .gitignore           # Игнорируемые файлы
 # ├── services/api.py      # Взаимодействие с FastAPI-сервисом
 # └── handlers/
 #     ├── start.py         # Команды start и set_reviewer

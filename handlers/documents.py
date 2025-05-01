@@ -107,6 +107,7 @@ async def handle_docx_file(message: Message, state: FSMContext):
         file_obj = await message.bot.get_file(data["file"].file_id)
         file = await message.bot.download_file(file_obj.file_path)
 
+        await message.answer("⏳ Проверка документа началась, подождите немного...")
         result = validate_docx_document(file, data["file"].file_name, data["doc_type"])
         #await message.answer(f"Результат проверки:\n{result}")
         await message.answer(format_validation_result(result), parse_mode="Markdown")
@@ -133,6 +134,7 @@ async def handle_docx_type(message: Message, state: FSMContext):
     file_obj = await message.bot.get_file(data["file"].file_id)
     file = await message.bot.download_file(file_obj.file_path)
 
+    await message.answer("⏳ Проверка документа началась, подождите немного...")
     result = validate_docx_document(file, data["file"].file_name, doc_type)
     #await message.answer(f"Результат проверки:\n{result}")
     await message.answer(format_validation_result(result), parse_mode="Markdown")
@@ -222,6 +224,8 @@ async def process_latex_validation(message: Message, state: FSMContext):
 
     sty_file_info = await message.bot.get_file(data["sty"].file_id)
     sty_file = await message.bot.download_file(sty_file_info.file_path)
+
+    await message.answer("⏳ Проверка документа началась, подождите немного...")
 
     result = validate_latex_document(
         tex_file, data["tex"].file_name,
