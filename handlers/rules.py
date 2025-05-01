@@ -23,6 +23,7 @@ def get_valid_doc_types():
     options = get_doc_options()
     return [opt["name"].lower() for opt in options] if options else []
 
+
 async def is_state_expired(state: FSMContext) -> bool:
     data = await state.get_data()
     start_time = data.get("start_time")
@@ -72,7 +73,8 @@ async def process_doc_type_internal(message: types.Message, doc_type: str, state
 
     if doc_type not in valid_types:
         ds = '\\'
-        text = "❌ Неверный тип документа.\n\n*Доступные типы:*\n" + "\n".join(f"- {t.replace('_', f'{ds}_')}" for t in valid_types)
+        text = "❌ Неверный тип документа.\n\n*Доступные типы:*\n" + "\n".join(
+            f"- {t.replace('_', f'{ds}_')}" for t in valid_types)
         await state.update_data(start_time=datetime.now().timestamp())
         await message.answer(text, parse_mode="Markdown")
         await state.set_state(RuleStates.waiting_for_doc_type)
