@@ -49,29 +49,105 @@ async def is_state_expired(state: FSMContext) -> bool:
     now = datetime.now().timestamp()
     return (now - start_time) > MAX_STATE_LIFETIME
 
-
 def format_validation_result(result: dict) -> str:
+    def format_found(found: dict) -> str:
+        sections = []
+
+        # Приложения
+        if "appendices" in found:
+            appendices = found["appendices"]
+            titles = appendices.get("appendix_titles", [])
+            links = appendices.get("appendix_links", [])
+
+            titles_text = "\n".join(
+                f"  - {item['letter']}: {item['title']} (PDF: {'да' if item.get('pdf_included') else 'нет'})"
+                for item in titles
+            ) or "_Не указаны_"
+            links_text = "\n".join(
+                f"  - {item['raw_text']}" for item in links
+            ) or "_Не найдены_"
+
+            sections.append(f"*📎 Приложения:*\n**Названия:**\n{titles_text}\n**Ссылки:**\n{links_text}")
+
+        # Библиография
+        if "bibliography" in found:
+            bib = found["bibliography"]
+            items = "\n".join(
+                f"  - {item['key']}: {item['text'][:50]}..." for item in bib.get("bibliography_items", [])
+            ) or "_Не найдены_"
+            cited = ", ".join(bib.get("cite_keys", [])) or "_Нет ссылок_"
+
+            sections.append(f"*📚 Библиография:*\n**Источники:**\n{items}\n**Ссылки в тексте:** {cited}")
+
+        # Рисунки
+        if "pictures" in found:
+            pics = found["pictures"]
+            labels = ", ".join(p["label"] for p in pics.get("labels", [])) or "_Нет меток_"
+            refs = ", ".join(p["label"] for p in pics.get("refs", [])) or "_Нет ссылок_"
+            sections.append(f"*🖼️ Рисунки:*\n**Метки:** {labels}\n**Ссылки:** {refs}")
+
+        # Таблицы
+        if "tables" in found:
+            tables = found["tables"].get("tables", {})
+            table_labels = ", ".join(t["label"] for t in tables.get("labels", [])) or "_Нет меток_"
+            table_refs = ", ".join(t["label"] for t in tables.get("refs", [])) or "_Нет ссылок_"
+            sections.append(f"*📊 Таблицы:*\n**Метки:** {table_labels}\n**Ссылки:** {table_refs}")
+
+        # Списки
+        if "lists" in found:
+            lists = found["lists"]
+            enumarabic = len(lists.get("enumarabic", []))
+            enumasbuk = len(lists.get("enumasbuk", []))
+            enummarker = len(lists.get("enummarker", []))
+            sections.append(f"*📌 Списки:*\n- Нумерованные (арабские): {enumarabic}\n- Нумерованные (буквы): {enumasbuk}\n- Маркированные: {enummarker}")
+
+        # Структура
+        if "structure" in found:
+            structure = found["structure"]
+            numbered = ", ".join(structure.get("numbered_chapters", [])) or "_Нет_"
+            unnumbered = ", ".join(structure.get("unnumbered_chapters", [])) or "_Нет_"
+            sections.append(f"*📂 Структура:*\n**Нумерованные главы:** {numbered}\n**Без номера:** {unnumbered}")
+
+        return "\n\n".join(sections) if sections else "_Элементы не найдены._"
+
+    def format_errors(errors: list) -> str:
+        return "\n".join(f"- {e}" for e in errors) if errors else "_Ошибок нет._"
+
     valid = "✅ Да" if result.get("valid", True) else "❌ Нет"
+    found_text = format_found(result.get("found", {}))
+    errors_text = format_errors(result.get("errors", []))
 
-    found = result.get("found")
-    if found:
-        found_list = "\n".join(f"- {item}" for item in found)
-    else:
-        found_list = "_Элементы не найдены._"
-
-    errors = result.get("errors")
-    if errors:
-        errors_list = "\n".join(f"- {error}" for error in errors)
-    else:
-        errors_list = "_Ошибок нет._"
-
-    formatted_text = (
-        f"📋 Результат проверки документа:\n\n"
+    return (
+        f"📋 *Результат проверки документа:*\n\n"
         f"*Правильность оформления:* {valid}\n\n"
-        f"*Найденные элементы:*\n{found_list}\n\n"
-        f"*Ошибки:*\n{errors_list}"
+        f"*Найденные элементы:*\n{found_text}\n\n"
+        f"*Ошибки:*\n{errors_text}"
     )
-    return formatted_text
+
+
+
+# def format_validation_result(result: dict) -> str:
+#     valid = "✅ Да" if result.get("valid", True) else "❌ Нет"
+#
+#     found = result.get("found")
+#     if found:
+#         found_list = "\n".join(f"- {item}" for item in found)
+#     else:
+#         found_list = "_Элементы не найдены._"
+#
+#     errors = result.get("errors")
+#     if errors:
+#         errors_list = "\n".join(f"- {error}" for error in errors)
+#     else:
+#         errors_list = "_Ошибок нет._"
+#
+#     formatted_text = (
+#         f"📋 Результат проверки документа:\n\n"
+#         f"*Правильность оформления:* {valid}\n\n"
+#         f"*Найденные элементы:*\n{found_list}\n\n"
+#         f"*Ошибки:*\n{errors_list}"
+#     )
+#     return formatted_text
 
 
 @router.message(Command("check_docx"))
