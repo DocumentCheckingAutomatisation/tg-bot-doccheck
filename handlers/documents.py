@@ -51,7 +51,7 @@ async def is_state_expired(state: FSMContext) -> bool:
 
 
 def format_validation_result(result: dict) -> str:
-    valid = "✅ Да" if result.get("valid", False) else "❌ Нет"
+    valid = "✅ Да" if result.get("valid", True) else "❌ Нет"
 
     found = result.get("found")
     if found:
@@ -127,10 +127,21 @@ async def handle_docx_file(message: Message, state: FSMContext):
 
         logger.info(f"Началась проверка docx файла {data['file'].file_name} для пользователя {message.from_user.id}")
         await message.answer("⏳ Проверка документа началась, подождите немного...")
+
         result = validate_docx_document(file, data["file"].file_name, data["doc_type"])
-        # await message.answer(f"Результат проверки:\n{result}")
-        logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
-        await message.answer(format_validation_result(result), parse_mode="Markdown")
+
+        if result.get("error"):
+            r = result.get("error")
+            logger.error(f"Ошибка при проверке docx: {r}")
+            await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
+        else:
+            logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
+            await message.answer(format_validation_result(result), parse_mode="Markdown")
+
+        # result = validate_docx_document(file, data["file"].file_name, data["doc_type"])
+        #
+        # logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
+        # await message.answer(format_validation_result(result), parse_mode="Markdown")
 
         await state.clear()
     else:
@@ -161,10 +172,20 @@ async def handle_docx_type(message: Message, state: FSMContext):
 
     logger.info(f"Началась проверка docx файла {data['file'].file_name} для пользователя {message.from_user.id}")
     await message.answer("⏳ Проверка документа началась, подождите немного...")
+
     result = validate_docx_document(file, data["file"].file_name, doc_type)
-    logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
-    # await message.answer(f"Результат проверки:\n{result}")
-    await message.answer(format_validation_result(result), parse_mode="Markdown")
+
+    if result.get("error"):
+        r = result.get("error")
+        logger.error(f"Ошибка при проверке docx: {r}")
+        await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
+    else:
+        logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
+        await message.answer(format_validation_result(result), parse_mode="Markdown")
+
+    # result = validate_docx_document(file, data["file"].file_name, doc_type)
+    # logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
+    # await message.answer(format_validation_result(result), parse_mode="Markdown")
 
     await state.clear()
 
@@ -277,10 +298,18 @@ async def process_latex_validation(message: Message, state: FSMContext):
         sty_file, data["sty"].file_name,
         data["doc_type"]
     )
-    logger.info(f"Проверка LaTeX завершена для пользователя {message.from_user.id}")
-    await message.answer(format_validation_result(result), parse_mode="Markdown")
 
-    # await message.answer(f"Результат проверки:\n{result}")
+    if result.get("error"):
+        r = result.get("error")
+        logger.error(f"Ошибка при проверке latex: {r}")
+        await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
+    else:
+        logger.info(f"Проверка latex завершена для пользователя {message.from_user.id}")
+        await message.answer(format_validation_result(result), parse_mode="Markdown")
+
+    # logger.info(f"Проверка LaTeX завершена для пользователя {message.from_user.id}")
+    # await message.answer(format_validation_result(result), parse_mode="Markdown")
+
     await state.clear()
 
 
