@@ -49,6 +49,11 @@ async def is_state_expired(state: FSMContext) -> bool:
     now = datetime.now().timestamp()
     return (now - start_time) > MAX_STATE_LIFETIME
 
+async def send_long_message(message: Message, text: str):
+    max_length = 4096
+    for i in range(0, len(text), max_length):
+        await message.answer(text[i:i+max_length])
+
 def format_validation_result(result: dict) -> str:
     def format_found(found: dict) -> str:
         sections = []
@@ -386,7 +391,7 @@ async def process_latex_validation(message: Message, state: FSMContext):
     else:
         logger.info(f"Проверка latex завершена для пользователя {message.from_user.id}")
         res = format_validation_result(result)
-        await message.answer(res)
+        await send_long_message(message, res)
         logger.debug(f"Проверка docx завершена для пользователя {message.from_user.username} c результатом {res}")
 
     # logger.info(f"Проверка LaTeX завершена для пользователя {message.from_user.id}")
