@@ -212,7 +212,9 @@ async def handle_docx_file(message: Message, state: FSMContext):
             await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
         else:
             logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
-            await message.answer(format_validation_result(result), parse_mode="Markdown")
+            res = format_validation_result(result)
+            await message.answer(res, parse_mode="Markdown")
+            logger.debug(f"Проверка docx завершена для пользователя {message.from_user.username} c результатом {res}")
 
         # result = validate_docx_document(file, data["file"].file_name, data["doc_type"])
         #
@@ -257,7 +259,9 @@ async def handle_docx_type(message: Message, state: FSMContext):
         await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
     else:
         logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
-        await message.answer(format_validation_result(result), parse_mode="Markdown")
+        res = format_validation_result(result)
+        await message.answer(res, parse_mode="Markdown")
+        logger.debug(f"Проверка docx завершена для пользователя {message.from_user.username} c результатом {res}")
 
     # result = validate_docx_document(file, data["file"].file_name, doc_type)
     # logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
@@ -381,7 +385,9 @@ async def process_latex_validation(message: Message, state: FSMContext):
         await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
     else:
         logger.info(f"Проверка latex завершена для пользователя {message.from_user.id}")
-        await message.answer(format_validation_result(result), parse_mode="Markdown")
+        res = format_validation_result(result)
+        await message.answer(res, parse_mode="Markdown")
+        logger.debug(f"Проверка docx завершена для пользователя {message.from_user.username} c результатом {res}")
 
     # logger.info(f"Проверка LaTeX завершена для пользователя {message.from_user.id}")
     # await message.answer(format_validation_result(result), parse_mode="Markdown")
