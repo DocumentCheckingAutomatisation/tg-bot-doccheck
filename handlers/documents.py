@@ -126,28 +126,28 @@ def format_validation_result(result: dict) -> str:
 
 
 
-# def format_validation_result(result: dict) -> str:
-#     valid = "✅ Да" if result.get("valid", True) else "❌ Нет"
-#
-#     found = result.get("found")
-#     if found:
-#         found_list = "\n".join(f"- {item}" for item in found)
-#     else:
-#         found_list = "_Элементы не найдены._"
-#
-#     errors = result.get("errors")
-#     if errors:
-#         errors_list = "\n".join(f"- {error}" for error in errors)
-#     else:
-#         errors_list = "_Ошибок нет._"
-#
-#     formatted_text = (
-#         f"📋 Результат проверки документа:\n\n"
-#         f"*Правильность оформления:* {valid}\n\n"
-#         f"*Найденные элементы:*\n{found_list}\n\n"
-#         f"*Ошибки:*\n{errors_list}"
-#     )
-#     return formatted_text
+def format_validation_result1(result: dict) -> str:
+    valid = "✅ Да" if result.get("valid", True) else "❌ Нет"
+
+    found = result.get("found")
+    if found:
+        found_list = "\n".join(f"- {item}" for item in found)
+    else:
+        found_list = "_Элементы не найдены.(в разработке)_"
+
+    errors = result.get("errors")
+    if errors:
+        errors_list = "\n".join(f"- {error}" for error in errors)
+    else:
+        errors_list = "_Ошибок нет._"
+
+    formatted_text = (
+        f"📋 Результат проверки документа:\n\n"
+        f"*Правильность оформления:* {valid}\n\n"
+        f"*Найденные элементы:*\n{found_list}\n\n"
+        f"*Ошибки:*\n{errors_list}"
+    )
+    return formatted_text
 
 
 @router.message(Command("check_docx"))
@@ -386,7 +386,7 @@ async def process_latex_validation(message: Message, state: FSMContext):
     else:
         logger.info(f"Проверка latex завершена для пользователя {message.from_user.id}")
         res = format_validation_result(result)
-        await message.answer(res, parse_mode="Markdown")
+        await message.answer(res)
         logger.debug(f"Проверка docx завершена для пользователя {message.from_user.username} c результатом {res}")
 
     # logger.info(f"Проверка LaTeX завершена для пользователя {message.from_user.id}")
