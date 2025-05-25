@@ -5,8 +5,9 @@ from aiogram.filters import Command
 
 from config import SECRET_CODE, ADMIN_USER_ID
 from db import get_user_role, set_user_role, REVIEWER_ROLE, STUDENT_ROLE, get_recent_checks
-from handlers.documents import send_long_message
+
 from logger import logger
+from services.formatting import send_long_message
 
 router = Router()
 
@@ -154,6 +155,7 @@ async def feedback(message: types.Message):
         logger.warning(f"⚠️ Не удалось отправить сообщение админу: {e}")
 
     await message.answer("Спасибо за ваш отзыв! Он был отправлен администратору.")
+
 
 @router.message(Command("recent_checks"))
 async def recent_checks(message: types.Message):
