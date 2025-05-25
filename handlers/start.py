@@ -1,8 +1,11 @@
+from datetime import datetime
+
 from aiogram import Router, types
 from aiogram.filters import Command
 
 from config import SECRET_CODE, ADMIN_USER_ID
-from db import get_user_role, set_user_role, REVIEWER_ROLE, STUDENT_ROLE
+from db import get_user_role, set_user_role, REVIEWER_ROLE, STUDENT_ROLE, get_recent_checks
+from handlers.documents import send_long_message
 from logger import logger
 
 router = Router()
@@ -26,6 +29,7 @@ def get_available_commands(role: str) -> list[str]:
     if role == REVIEWER_ROLE:
         commands.append("/change_rule <тип> <ключ> <значение> — изменить правило")
         commands.append("/change_rule_for_all <ключ> <значение> — изменить правило для всех типов")
+        commands.append("/recent_checks — список проверок за последние 14 дней")
         commands.append("/reset_role — сбросить роль до student")
 
     return commands
@@ -150,6 +154,46 @@ async def feedback(message: types.Message):
         logger.warning(f"⚠️ Не удалось отправить сообщение админу: {e}")
 
     await message.answer("Спасибо за ваш отзыв! Он был отправлен администратору.")
+
+@router.message(Command("recent_checks"))
+async def recent_checks(message: types.Message):
+    user_id = message.from_user.id
+    role = get_user_role(user_id)
+
+    if role != REVIEWER_ROLE:
+        logger.warning(f"Пользователь {user_id} попытался использовать команду recent_checks.")
+        await message.answer("⛔️ Эта команда доступна только нормоконтролёрам.")
+        return
+
+    checks = get_recent_checks(14)
+    if not checks:
+        await message.answer("За последние 14 дней не было проверок.")
+        return
+
+    text = "📄 <b>Последние проверки за 14 дней:</b>\n\n"
+    current_type = None
+
+    for username, doc_type, check_type, result, check_time in checks:
+        if doc_type != current_type:
+            current_type = doc_type
+            text += f"\n🔷 <u><b>Тип документа: {doc_type}</b></u>\n"
+
+        readable_time = datetime.fromisoformat(str(check_time)).strftime("%d.%m.%Y %H:%M")
+        if result == '0':
+            result_str = "Найдены ошибки ❌"
+        elif result == '1':
+            result_str = "Ошибки не найдены ✅"
+        else:
+            result_str = "Неизвестный результат"
+
+        text += (
+            f"👤 @{username or 'неизвестно'}\n"
+            f"🕒 Время: {readable_time}\n"
+            f"🔍 Проверка: {check_type}\n"
+            f"☑️ Результат: {result_str}\n\n"
+        )
+
+    await send_long_message(message, text)
 
 
 def register(dp):

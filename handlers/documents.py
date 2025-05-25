@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 
+from db import save_check_result
 from logger import logger
 from services.api import validate_docx_document, validate_latex_document
 
@@ -269,6 +270,13 @@ async def handle_docx_file(message: Message, state: FSMContext):
             await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
         else:
             logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
+            save_check_result(
+                user_id=message.from_user.id,
+                doc_type=data["doc_type"],
+                check_type="docx",
+                result=1
+            )
+            logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
             res = format_docx_validation_result(result)
             # await message.answer(res, parse_mode="Markdown")
             await send_long_message(message, res)
@@ -317,6 +325,13 @@ async def handle_docx_type(message: Message, state: FSMContext):
         await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
     else:
         logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
+        save_check_result(
+            user_id=message.from_user.id,
+            doc_type=doc_type,
+            check_type="docx",
+            result=1
+        )
+        logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
         res = format_docx_validation_result(result)
         # await message.answer(res, parse_mode="Markdown")
         await send_long_message(message, res)
@@ -438,12 +453,20 @@ async def process_latex_validation(message: Message, state: FSMContext):
         data["doc_type"]
     )
 
+
     if result.get("error"):
         r = result.get("error")
         logger.error(f"Ошибка при проверке latex: {r}")
         await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
     else:
         logger.info(f"Проверка latex завершена для пользователя {message.from_user.id}")
+        save_check_result(
+            user_id=message.from_user.id,
+            doc_type=data["doc_type"],
+            check_type="latex",
+            result=bool(result['valid'])
+        )
+        logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
         res = format_latex_validation_result(result)
         await send_long_message(message, res)
         logger.debug(f"Проверка docx завершена для пользователя {message.from_user.username} c результатом {res}")
