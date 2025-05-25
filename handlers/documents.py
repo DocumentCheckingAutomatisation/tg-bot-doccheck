@@ -274,7 +274,7 @@ async def handle_docx_file(message: Message, state: FSMContext):
                 user_id=message.from_user.id,
                 doc_type=data["doc_type"],
                 check_type="docx",
-                result=1
+                result=bool(result['valid'])
             )
             logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
             res = format_docx_validation_result(result)
@@ -329,7 +329,7 @@ async def handle_docx_type(message: Message, state: FSMContext):
             user_id=message.from_user.id,
             doc_type=doc_type,
             check_type="docx",
-            result=1
+            result=bool(result['valid'])
         )
         logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
         res = format_docx_validation_result(result)
