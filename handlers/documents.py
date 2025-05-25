@@ -53,8 +53,7 @@ async def is_state_expired(state: FSMContext) -> bool:
 async def send_long_message(message: Message, text: str):
     max_length = 4096
     for i in range(0, len(text), max_length):
-        await message.answer(text[i:i + max_length])
-
+        await message.answer(text[i:i + max_length], parse_mode="HTML")
 
 def format_latex_validation_result(result: dict) -> str:
     def yesno(errors: list, key: str) -> str:
@@ -63,14 +62,14 @@ def format_latex_validation_result(result: dict) -> str:
             "structure.sections": ["В главе"],
             "bold.relevance": ["актуальн"],
             "bold.goal": ["цель"],
-            "bold.tasks": ["Не удалось найти текст введения","Отсутствует ключевое слово во введении, которое должно быть выделено командой жирности {{\\bf}}: {задачи}"],
-            "bold.object": ["Не удалось найти текст введения","Отсутствует ключевое слово во введении, которое должно быть выделено командой жирности {{\\bf}}: {предмет}"],
-            "bold.subject": ["Не удалось найти текст введения","Отсутствует ключевое слово во введении, которое должно быть выделено командой жирности {{\\bf}}: {объект}"],
-            "bold.novelty": ["Не удалось найти текст введения","Отсутствует ключевое слово во введении, которое должно быть выделено командой жирности {{\\bf}}: {новизн}"],
-            "bold.significance": ["Не удалось найти текст введения","Отсутствует ключевое слово во введении, которое должно быть выделено командой жирности {{\\bf}}: {практическая значимость}"],
-            "bold.excess": ["Ошибка: использование команды для 'жирный"],
-            "italic": ["Ошибка: использование команды для 'курсив", "smthing"],
-            "underline": ["Ошибка: использование команды для 'подчёркивание' "],
+            "bold.tasks": ["Не удалось найти текст введения", "ключевое слово.*задачи"],
+            "bold.object": ["Не удалось найти текст введения", "ключевое слово.*предмет"],
+            "bold.subject": ["Не удалось найти текст введения", "ключевое слово.*объект"],
+            "bold.novelty": ["Не удалось найти текст введения", "ключевое слово.*новизн"],
+            "bold.significance": ["Не удалось найти текст введения", "ключевое слово.*практическая значимость"],
+            "bold.excess": ["жирный"],
+            "italic": ["курсив"],
+            "underline": ["подчёркивание"],
             "lists": ["Пункт списка", "Вводная часть перед списком", "во вложенном списке", "вложенного списка"],
             "pictures.links": ["Нет ссылки на рисунок", "Нет рисунка"],
             "tables.links": ["Нет ссылки на table", "Нет table", "Нет ссылки на longtable", "Нет longtable"],
@@ -91,164 +90,96 @@ def format_latex_validation_result(result: dict) -> str:
 
     def get_list_summary(found: dict) -> str:
         lists = found.get("lists", {})
-        enumasbuk = len(lists.get("enumasbuk", []))
-        enumarabic = len(lists.get("enumarabic", []))
-        enummarker = len(lists.get("enummarker", []))
-        return f"Списки enumasbuk: {enumasbuk}, enumarabic: {enumarabic}, enummarker: {enummarker}."
+        return (
+            f"<blockquote>Найденные списки:\n"
+            f"- Нумерованные (буквы): {len(lists.get('enumasbuk', []))}\n"
+            f"- Нумерованные (цифры): {len(lists.get('enumarabic', []))}\n"
+            f"- Маркированные (дефис): {len(lists.get('enummarker', []))}</blockquote>"
+        )
 
     def get_pic_summary(found: dict) -> str:
         pics = found.get("pictures", {})
-        labels = ", ".join(p.get("label") for p in pics.get("labels", [])) or "-"
-        refs = ", ".join(p.get("label") for p in pics.get("refs", [])) or "-"
-        return f"Рисунки: {labels}; Ссылки: {refs}."
+        labels = ", ".join(p.get("label") for p in pics.get("labels", [])) or "нет"
+        refs = ", ".join(p.get("label") for p in pics.get("refs", [])) or "нет"
+        return f"<blockquote>Найденные рисунки:\n- Метка объектов: {labels}\n- Ссылки в тексте: {refs}</blockquote>"
 
     def get_table_summary(found: dict) -> str:
         tables = found.get("tables", {}).get("tables", {})
-        labels = ", ".join(t.get("label") for t in tables.get("labels", [])) or "-"
-        refs = ", ".join(t.get("label") for t in tables.get("refs", [])) or "-"
-        return f"Таблицы: {labels}; Ссылки: {refs}."
+        labels = ", ".join(t.get("label") for t in tables.get("labels", [])) or "нет"
+        refs = ", ".join(t.get("label") for t in tables.get("refs", [])) or "нет"
+        return f"<blockquote>Найденные таблицы:\n- Метки объектов: {labels}\n- Ссылки в тексте: {refs}</blockquote>"
 
     def get_chapters(found: dict) -> str:
-        unnum_chapters = found.get("structure", {}).get("unnumbered_chapters", [])
-        num_chapters= found.get("structure", {}).get("numbered_chapters", [])
-        unnum_chapters_str = ", ".join(unnum_chapters) if unnum_chapters else "-"
-        num_chapters_str = ", ".join(num_chapters) if num_chapters else "-"
-        return unnum_chapters_str+", "+num_chapters_str
-
+        structure = found.get("structure", {})
+        unnum = ", ".join(structure.get("unnumbered_chapters", [])) or "нет"
+        num = ", ".join(structure.get("numbered_chapters", [])) or "нет"
+        return f"<blockquote> Главы:\n- Ненумерованные: {unnum}\n- Нумерованные: {num} </blockquote>"
 
     def get_sections(found: dict) -> str:
-        num_sections_1 = found.get("structure", {}).get("numbered_sections", {}).get("1 глава", [])
-        num_sections_2 = found.get("structure", {}).get("numbered_sections", {}).get("2 глава", [])
-        unnum_sections_1 = found.get("structure", {}).get("unnumbered_sections", {}).get("1 глава", [])
-        unnum_sections_2 = found.get("structure", {}).get("unnumbered_sections", {}).get("2 глава", [])
+        structure = found.get("structure", {})
+        sec = structure.get("numbered_sections", {})
+        unsec = structure.get("unnumbered_sections", {})
 
-        num_sections_1_str = ", ".join(num_sections_1) if num_sections_1 else "-"
-        num_sections_2_str= ", ".join(num_sections_2) if num_sections_2 else "-"
-        unnum_sections_1_str = ", ".join(unnum_sections_1) if unnum_sections_1 else "-"
-        unnum_sections_2_str = ", ".join(unnum_sections_2) if unnum_sections_2 else "-"
-        return num_sections_1_str + ", " + num_sections_2_str + ", " + unnum_sections_1_str + ", " + unnum_sections_2_str
+        def format_sec(sec_dict, title):
+            entries = sec_dict.get(title, [])
+            return ", ".join(entries) if entries else "нет"
 
-    def format_table() -> str:
+        return (
+            f"<blockquote>Разделы:\n"
+            f"- 1 глава: нумерованные: {format_sec(sec, '1 глава')}, ненумерованные: {format_sec(unsec, '1 глава')}\n"
+            f"- 2 глава: нумерованные: {format_sec(sec, '2 глава')}, ненумерованные: {format_sec(unsec, '2 глава')}</blockquote>"
+        )
+
+    def format_readable() -> str:
         errors = result.get("errors", [])
         found = result.get("found", {})
 
-        rows = [
-            ("Найденные главы", yesno(errors, "structure.chapters"), get_chapters(found)),
-            ("Найденные разделы", yesno(errors, "structure.sections"), get_sections(found)),
-            ("Актуальность жирным", yesno(errors, "bold.relevance"), "-"),
-            ("Цель жирным", yesno(errors, "bold.goal"), "-"),
-            ("Задачи жирным", yesno(errors, "bold.tasks"), "-"),
-            ("Объект жирным", yesno(errors, "bold.object"), "-"),
-            ("Предмет жирным", yesno(errors, "bold.subject"), "-"),
-            ("Теор. новизна жирным", yesno(errors, "bold.novelty"), "-"),
-            ("Практ. значимость жирным", yesno(errors, "bold.significance"), "-"),
-            ("Отсутствие лишнего жирного начертания", yesno(errors, "bold.excess"), "-"),
-            ("Отсутствие курсива", yesno(errors, "italic"), "-"),
-            ("Отсутствие подчеркиваний", yesno(errors, "underline"), "-"),
-            ("Оформление списков (пунктуация и регистр)", yesno(errors, "lists"), get_list_summary(found)),
-            ("Наличие пар объект-ссылка у рисунков", yesno(errors, "pictures.links"), get_pic_summary(found)),
-            ("Наличие пар объект-ссылка у таблиц", yesno(errors, "tables.links"), get_table_summary(found)),
-            ("Наличие пары объект-ссылка у приложений", yesno(errors, "appendices.links"), "-"),
-            ("Наличие пары объект-ссылка у источников", yesno(errors, "bibliography.links"), "-"),
-            ("Ссылки до рисунка/таблицы", yesno(errors, "order.ref_before_objects"), "-"),
-            ("Ссылки на той же/соседней странице от рисунка/таблицы", yesno(errors, "order.same_page"), "-"),
-            ("Стилевой файл settings.sty соответствует", yesno(errors, "sty"), "-"),
+        aspects = [
+            ("Необходимые главы", yesno(errors, "structure.chapters"), get_chapters(found)),
+            ("Необходимые разделы", yesno(errors, "structure.sections"), get_sections(found)),
+            ("Цель выделена жирным", yesno(errors, "bold.goal")),
+            ("Задачи выделены жирным", yesno(errors, "bold.tasks")),
+            ("Актуальность жирным", yesno(errors, "bold.relevance")),
+            ("Объект выделен жирным", yesno(errors, "bold.subject")),
+            ("Предмет выделен жирным", yesno(errors, "bold.object")),
+            ("Новизна выделена жирным", yesno(errors, "bold.novelty")),
+            ("Практич. значимость жирным", yesno(errors, "bold.significance")),
+            ("Нет лишнего жирного", yesno(errors, "bold.excess")),
+            ("Нет курсива", yesno(errors, "italic")),
+            ("Нет подчеркиваний", yesno(errors, "underline")),
+            ("Списки оформлены корректно", yesno(errors, "lists"), get_list_summary(found)),
+            ("Рисунки и ссылки на них", yesno(errors, "pictures.links"), get_pic_summary(found)),
+            ("Таблицы и ссылки на них", yesno(errors, "tables.links"), get_table_summary(found)),
+            ("Приложения и ссылки на них", yesno(errors, "appendices.links")),
+            ("Источники и ссылки на них", yesno(errors, "bibliography.links")),
+            ("Ссылки находятся до рисунка/таблицы", yesno(errors, "order.references_before_objects")),
+            ("Ссылки на той же/соседней странице от рис./табл.", yesno(errors, "order.same_page")),
+            ("Файл settings.sty соответствует требованиям", yesno(errors, "sty")),
         ]
 
-        table_lines = ["Аспект проверки\tВерность\tНайденное"]
-        for name, valid, found_value in rows:
-            table_lines.append(f"{name}\t{valid}\t{found_value}")
-        return "\n".join(table_lines)
+        lines = []
+        for aspect in aspects:
+            if len(aspect) == 2:
+                name, validity = aspect
+                lines.append(f"🔹{name}: {validity}\n")
+            else:
+                name, validity, detail = aspect
+                lines.append(f"🔹{name} — {validity} {detail}\n")
+
+        return "\n".join(lines)
 
     def format_errors(errors: list) -> str:
-        return "\n".join(f"- {e}" for e in errors) if errors else "_Ошибок нет._"
+        return "\n".join(f"📌 {e}\n" for e in errors) if errors else "Ошибок не найдено😊"
 
     valid = "Да ✅" if result.get("valid", True) else "Нет ❌"
-    errors_text = format_errors(result.get("errors", []))
-    table_text = format_table()
-
-    return (
-        f"📋 *Результат проверки документа*\n\n"
-        f"*Правильность оформления:* {valid}\n\n"
-        f"{table_text}\n\n"
-        f"*Ошибки:*\n{errors_text}"
-    )
-
-
-def format_latex_validation_result1(result: dict) -> str:
-    def format_found(found: dict) -> str:
-        sections = []
-
-        # Приложения
-        if "appendices" in found:
-            appendices = found["appendices"]
-            titles = appendices.get("appendix_titles", [])
-            links = appendices.get("appendix_links", [])
-
-            titles_text = "\n".join(
-                f"  - {item['letter']}: {item['title']} (PDF: {'да' if item.get('pdf_included') else 'нет'})"
-                for item in titles
-            ) or "_Не указаны_"
-            links_text = "\n".join(
-                f"  - {item['raw_text']}" for item in links
-            ) or "_Не найдены_"
-
-            sections.append(f"*📎 Приложения:*\n**Названия:**\n{titles_text}\n**Ссылки:**\n{links_text}")
-
-        # Библиография
-        if "bibliography" in found:
-            bib = found["bibliography"]
-            items = "\n".join(
-                f"  - {item['key']}: {item['text'][:50]}..." for item in bib.get("bibliography_items", [])
-            ) or "_Не найдены_"
-            cited = ", ".join(bib.get("cite_keys", [])) or "_Нет ссылок_"
-
-            sections.append(f"*📚 Библиография:*\n**Источники:**\n{items}\n**Ссылки в тексте:** {cited}")
-
-        # Рисунки
-        if "pictures" in found:
-            pics = found["pictures"]
-            labels = ", ".join(p["label"] for p in pics.get("labels", [])) or "_Нет меток_"
-            refs = ", ".join(p["label"] for p in pics.get("refs", [])) or "_Нет ссылок_"
-            sections.append(f"*🖼️ Рисунки:*\n**Метки:** {labels}\n**Ссылки:** {refs}")
-
-        # Таблицы
-        if "tables" in found:
-            tables = found["tables"].get("tables", {})
-            table_labels = ", ".join(t["label"] for t in tables.get("labels", [])) or "_Нет меток_"
-            table_refs = ", ".join(t["label"] for t in tables.get("refs", [])) or "_Нет ссылок_"
-            sections.append(f"*📊 Таблицы:*\n**Метки:** {table_labels}\n**Ссылки:** {table_refs}")
-
-        # Списки
-        if "lists" in found:
-            lists = found["lists"]
-            enumarabic = len(lists.get("enumarabic", []))
-            enumasbuk = len(lists.get("enumasbuk", []))
-            enummarker = len(lists.get("enummarker", []))
-            sections.append(
-                f"*📌 Списки:*\n- Нумерованные (арабские): {enumarabic}\n- Нумерованные (буквы): {enumasbuk}\n- Маркированные: {enummarker}")
-
-        # Структура
-        if "structure" in found:
-            structure = found["structure"]
-            numbered = ", ".join(structure.get("numbered_chapters", [])) or "_Нет_"
-            unnumbered = ", ".join(structure.get("unnumbered_chapters", [])) or "_Нет_"
-            sections.append(f"*📂 Структура:*\n**Нумерованные главы:** {numbered}\n**Без номера:** {unnumbered}")
-
-        return "\n\n".join(sections) if sections else "_Элементы не найдены._"
-
-    def format_errors(errors: list) -> str:
-        return "\n".join(f"- {e}" for e in errors) if errors else "_Ошибок нет._"
-
-    valid = "✅ Да" if result.get("valid", True) else "❌ Нет"
-    found_text = format_found(result.get("found", {}))
+    check_results = format_readable()
     errors_text = format_errors(result.get("errors", []))
 
     return (
-        f"📋 *Результат проверки документа:*\n\n"
-        f"*Правильность оформления:* {valid}\n\n"
-        f"*Найденные элементы:*\n{found_text}\n\n"
-        f"*Ошибки:*\n{errors_text}"
+        f"📋 <b>Результат проверки LaTeX-документа</b>\n\n"
+        f"💬 <u><b>Правильное оформление:</b></u> {valid}\n\n"
+        f"🔎 <u><b>Детали проверки:</b></u>\n{check_results}\n"
+        f"⚠️ <u><b>Обнаруженные ошибки:</b></u>\n\n{errors_text}"
     )
 
 
@@ -269,9 +200,9 @@ def format_docx_validation_result(result: dict) -> str:
 
     formatted_text = (
         f"📋 Результат проверки документа:\n\n"
-        f"*Правильность оформления:* {valid}\n\n"
-        f"*Найденные элементы:*\n{found_list}\n\n"
-        f"*Ошибки:*\n{errors_list}"
+        f"💬 *Правильность оформления:* {valid}\n\n"
+        f"🔎 *Найденные элементы:*\n{found_list}\n\n"
+        f"⚠️ *Ошибки:*\n{errors_list}"
     )
     return formatted_text
 
