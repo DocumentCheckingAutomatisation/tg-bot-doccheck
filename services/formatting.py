@@ -85,14 +85,14 @@ def format_latex_validation_result(result: dict) -> str:
 
     def get_biblio(found:dict):
         biblio = found.get("bibliography", {})
-        bib_titles = biblio.get("bibliography_items", {}).get("text", [])
+        bib_titles = biblio.get("bibliography_items", [])
         bib_refs = biblio.get("cite_keys", [])
         return f"<blockquote>Найденные источники:\n- Элементы списка: {', '.join(bib_titles) if bib_titles else 'нет'}\n- Ссылки в тексте: {', '.join(bib_refs) if bib_refs else 'нет'}</blockquote>"
 
     def get_appendices(found: dict) -> str:
         appendices = found.get("appendices", {})
-        appendix_titles = appendices.get("appendix_titles", {}).get("full_title", [])
-        appendix_refs = appendices.get("'appendix_links'", {}).get("raw_text", [])
+        appendix_titles = appendices.get("titles", [])
+        appendix_refs = appendices.get("refs", [])
         return f"<blockquote>Найденные приложения:\n- Заголовки: {', '.join(appendix_titles) if appendix_titles else 'нет'}\n- Ссылки в тексте: {', '.join(appendix_refs) if appendix_refs else 'нет'}</blockquote>"
 
     def format_readable() -> str:
