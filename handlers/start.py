@@ -47,7 +47,9 @@ async def start(message: types.Message):
     await message.answer(
         f"Привет! Ваша текущая роль: {role}.\n"
         "Доступные команды:\n" +
-        "\n".join(commands)
+        "\n".join(commands) +
+        "\n\nLaTeX-шаблон студенческих работ ИГУ: https://github.com/Alyona1619/LaTeXTemplate \n"
+        "Видео-гайд по работе с шаблоном: https://www.youtube.com/playlist?list=PLEi6YXJjTzwHIK_g0Zc2m4cs4OVbxLyXN, https://rutube.ru/channel/64712980/"
     )
 
 
