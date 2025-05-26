@@ -30,6 +30,7 @@ def format_latex_validation_result(result: dict) -> str:
             "bibliography.links": ["библиографии"],
             "order.references_before_objects": ["находится после"],
             "order.same_page": ["Слишком большое расстояние", "на той же или следующей странице"],
+            "quotes": ["Найдены недопустимые кавычки"],
             "sty": ["Файл settings.sty", "Несовпадение в settings.sty"],
         }
 
@@ -119,6 +120,7 @@ def format_latex_validation_result(result: dict) -> str:
             ("Источники и ссылки на них", yesno(errors, "bibliography.links"), get_biblio(found)),
             ("Ссылки находятся до рисунка/таблицы", yesno(errors, "order.references_before_objects")),
             ("Ссылки на той же/соседней странице от рис./табл.", yesno(errors, "order.same_page")),
+            ("Кавычки верные", yesno(errors, "quotes")),
             ("Файл settings.sty соответствует требованиям", yesno(errors, "sty")),
         ]
 
