@@ -7,8 +7,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 
+from db import save_check_result
 from logger import logger
 from services.api import validate_docx_document, validate_latex_document
+from services.formatting import format_docx_validation_result, send_long_message, format_latex_validation_result
 
 router = Router()
 
@@ -48,111 +50,6 @@ async def is_state_expired(state: FSMContext) -> bool:
         return False
     now = datetime.now().timestamp()
     return (now - start_time) > MAX_STATE_LIFETIME
-
-async def send_long_message(message: Message, text: str):
-    max_length = 4096
-    for i in range(0, len(text), max_length):
-        await message.answer(text[i:i+max_length])
-
-def format_validation_result(result: dict) -> str:
-    def format_found(found: dict) -> str:
-        sections = []
-
-        # Приложения
-        if "appendices" in found:
-            appendices = found["appendices"]
-            titles = appendices.get("appendix_titles", [])
-            links = appendices.get("appendix_links", [])
-
-            titles_text = "\n".join(
-                f"  - {item['letter']}: {item['title']} (PDF: {'да' if item.get('pdf_included') else 'нет'})"
-                for item in titles
-            ) or "_Не указаны_"
-            links_text = "\n".join(
-                f"  - {item['raw_text']}" for item in links
-            ) or "_Не найдены_"
-
-            sections.append(f"*📎 Приложения:*\n**Названия:**\n{titles_text}\n**Ссылки:**\n{links_text}")
-
-        # Библиография
-        if "bibliography" in found:
-            bib = found["bibliography"]
-            items = "\n".join(
-                f"  - {item['key']}: {item['text'][:50]}..." for item in bib.get("bibliography_items", [])
-            ) or "_Не найдены_"
-            cited = ", ".join(bib.get("cite_keys", [])) or "_Нет ссылок_"
-
-            sections.append(f"*📚 Библиография:*\n**Источники:**\n{items}\n**Ссылки в тексте:** {cited}")
-
-        # Рисунки
-        if "pictures" in found:
-            pics = found["pictures"]
-            labels = ", ".join(p["label"] for p in pics.get("labels", [])) or "_Нет меток_"
-            refs = ", ".join(p["label"] for p in pics.get("refs", [])) or "_Нет ссылок_"
-            sections.append(f"*🖼️ Рисунки:*\n**Метки:** {labels}\n**Ссылки:** {refs}")
-
-        # Таблицы
-        if "tables" in found:
-            tables = found["tables"].get("tables", {})
-            table_labels = ", ".join(t["label"] for t in tables.get("labels", [])) or "_Нет меток_"
-            table_refs = ", ".join(t["label"] for t in tables.get("refs", [])) or "_Нет ссылок_"
-            sections.append(f"*📊 Таблицы:*\n**Метки:** {table_labels}\n**Ссылки:** {table_refs}")
-
-        # Списки
-        if "lists" in found:
-            lists = found["lists"]
-            enumarabic = len(lists.get("enumarabic", []))
-            enumasbuk = len(lists.get("enumasbuk", []))
-            enummarker = len(lists.get("enummarker", []))
-            sections.append(f"*📌 Списки:*\n- Нумерованные (арабские): {enumarabic}\n- Нумерованные (буквы): {enumasbuk}\n- Маркированные: {enummarker}")
-
-        # Структура
-        if "structure" in found:
-            structure = found["structure"]
-            numbered = ", ".join(structure.get("numbered_chapters", [])) or "_Нет_"
-            unnumbered = ", ".join(structure.get("unnumbered_chapters", [])) or "_Нет_"
-            sections.append(f"*📂 Структура:*\n**Нумерованные главы:** {numbered}\n**Без номера:** {unnumbered}")
-
-        return "\n\n".join(sections) if sections else "_Элементы не найдены._"
-
-    def format_errors(errors: list) -> str:
-        return "\n".join(f"- {e}" for e in errors) if errors else "_Ошибок нет._"
-
-    valid = "✅ Да" if result.get("valid", True) else "❌ Нет"
-    found_text = format_found(result.get("found", {}))
-    errors_text = format_errors(result.get("errors", []))
-
-    return (
-        f"📋 *Результат проверки документа:*\n\n"
-        f"*Правильность оформления:* {valid}\n\n"
-        f"*Найденные элементы:*\n{found_text}\n\n"
-        f"*Ошибки:*\n{errors_text}"
-    )
-
-
-
-def format_validation_result1(result: dict) -> str:
-    valid = "✅ Да" if result.get("valid", True) else "❌ Нет"
-
-    found = result.get("found")
-    if found:
-        found_list = "\n".join(f"- {item}" for item in found)
-    else:
-        found_list = "_Элементы не найдены.(в разработке)_"
-
-    errors = result.get("errors")
-    if errors:
-        errors_list = "\n".join(f"- {error}" for error in errors)
-    else:
-        errors_list = "_Ошибок нет._"
-
-    formatted_text = (
-        f"📋 Результат проверки документа:\n\n"
-        f"*Правильность оформления:* {valid}\n\n"
-        f"*Найденные элементы:*\n{found_list}\n\n"
-        f"*Ошибки:*\n{errors_list}"
-    )
-    return formatted_text
 
 
 @router.message(Command("check_docx"))
@@ -217,8 +114,16 @@ async def handle_docx_file(message: Message, state: FSMContext):
             await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
         else:
             logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
-            res = format_validation_result(result)
-            await message.answer(res, parse_mode="Markdown")
+            save_check_result(
+                user_id=message.from_user.id,
+                doc_type=data["doc_type"],
+                check_type="docx",
+                result=bool(result['valid'])
+            )
+            logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
+            res = format_docx_validation_result(result)
+            # await message.answer(res, parse_mode="Markdown")
+            await send_long_message(message, res)
             logger.debug(f"Проверка docx завершена для пользователя {message.from_user.username} c результатом {res}")
 
         # result = validate_docx_document(file, data["file"].file_name, data["doc_type"])
@@ -264,8 +169,16 @@ async def handle_docx_type(message: Message, state: FSMContext):
         await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
     else:
         logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
-        res = format_validation_result(result)
-        await message.answer(res, parse_mode="Markdown")
+        save_check_result(
+            user_id=message.from_user.id,
+            doc_type=doc_type,
+            check_type="docx",
+            result=bool(result['valid'])
+        )
+        logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
+        res = format_docx_validation_result(result)
+        # await message.answer(res, parse_mode="Markdown")
+        await send_long_message(message, res)
         logger.debug(f"Проверка docx завершена для пользователя {message.from_user.username} c результатом {res}")
 
     # result = validate_docx_document(file, data["file"].file_name, doc_type)
@@ -390,7 +303,14 @@ async def process_latex_validation(message: Message, state: FSMContext):
         await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
     else:
         logger.info(f"Проверка latex завершена для пользователя {message.from_user.id}")
-        res = format_validation_result(result)
+        save_check_result(
+            user_id=message.from_user.id,
+            doc_type=data["doc_type"],
+            check_type="latex",
+            result=bool(result['valid'])
+        )
+        logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
+        res = format_latex_validation_result(result)
         await send_long_message(message, res)
         logger.debug(f"Проверка docx завершена для пользователя {message.from_user.username} c результатом {res}")
 

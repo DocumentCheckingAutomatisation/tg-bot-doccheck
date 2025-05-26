@@ -21,6 +21,18 @@ def init_db():
                 last_active TEXT
             )
         ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users_checks (
+                user_id INTEGER PRIMARY KEY,
+                doc_type TEXT,
+                check_type TEXT,
+                result TEXT,
+                check_time TEXT,
+                FOREIGN KEY (user_id) REFERENCES roles(user_id)
+            )
+        ''')
+
         conn.commit()
 
 
@@ -72,3 +84,42 @@ def set_user_role(user_id: int, role: str):
             ON CONFLICT(user_id) DO UPDATE SET role = excluded.role, last_active = excluded.last_active
         ''', (user_id, role, now_utc))
         conn.commit()
+
+def get_recent_checks(days: int = 14) -> list[tuple]:
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    since_str = since.isoformat()
+
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT r.username, c.doc_type, c.check_type, c.result, c.check_time
+            FROM users_checks c
+            JOIN roles r ON c.user_id = r.user_id
+            WHERE c.check_time >= ?
+            ORDER BY 
+                CASE c.doc_type
+                    WHEN 'diploma' THEN 1
+                    WHEN 'course_work' THEN 2
+                    WHEN 'practice_report' THEN 3
+                    ELSE 4
+                END,
+                c.check_time DESC
+        ''', (since_str,))
+        return cursor.fetchall()
+
+def save_check_result(user_id: int, doc_type: str, check_type: str, result: str):
+    from datetime import datetime, timezone
+    check_time = datetime.now(timezone.utc).isoformat()
+
+    utc_now = datetime.now(timezone.utc)
+    check_time = (utc_now + timedelta(hours=8)).isoformat()
+
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT OR REPLACE INTO users_checks (user_id, doc_type, check_type, result, check_time)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, doc_type, check_type, result, check_time))
+        conn.commit()
+
+
