@@ -38,7 +38,7 @@ def get_valid_types_str():
 async def check_file_size(message: Message, max_size_mb: int = 25) -> bool:
     if message.document.file_size > max_size_mb * 1024 * 1024:
         await message.answer(f"❌ Файл слишком большой. Максимальный размер — {max_size_mb} МБ.")
-        logger.warning(f"Файл от пользователя {message.from_user.id} превышает размер {max_size_mb} МБ")
+        logger.warning(f"Файл от пользователя {message.from_user.username} превышает размер {max_size_mb} МБ")
         return False
     return True
 
@@ -54,13 +54,13 @@ async def is_state_expired(state: FSMContext) -> bool:
 
 @router.message(Command("check_docx"))
 async def handle_docx_check(message: Message, state: FSMContext):
-    logger.info(f"Пользователь {message.from_user.id} начал проверку docx")
+    logger.info(f"Пользователь {message.from_user.username} начал проверку docx")
     parts = message.text.split(maxsplit=1)
     if len(parts) >= 2:
         doc_type = parts[1].strip().lower().replace(" ", "_")
-        logger.debug(f"Пользователь {message.from_user.id} ввел тип документа docx: {doc_type}")
+        logger.debug(f"Пользователь {message.from_user.username} ввел тип документа docx: {doc_type}")
         if doc_type not in VALID_TYPES:
-            logger.warning(f"Пользователь {message.from_user.id} указал неверный тип docx: {doc_type}")
+            logger.warning(f"Пользователь {message.from_user.username} указал неверный тип docx: {doc_type}")
             await message.answer(
                 f"❌ Неизвестный тип документа: {doc_type}.\n"
                 f"✅ Возможные типы: {get_valid_types_str()}.\n"
@@ -80,7 +80,7 @@ async def handle_docx_check(message: Message, state: FSMContext):
 @router.message(DocxCheck.waiting_for_file, F.document)
 async def handle_docx_file(message: Message, state: FSMContext):
     if await is_state_expired(state):
-        logger.info(f"Сессия истекла для пользователя {message.from_user.id}")
+        logger.info(f"Сессия истекла для пользователя {message.from_user.username}")
         await message.answer(
             "⌛ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
         await state.clear()
@@ -88,7 +88,7 @@ async def handle_docx_file(message: Message, state: FSMContext):
 
     if not message.document.file_name.endswith(".docx"):
         logger.warning(
-            f"Пользователь {message.from_user.id} отправил файл с неправильным расширением: {message.document.file_name}")
+            f"Пользователь {message.from_user.username} отправил файл с неправильным расширением: {message.document.file_name}")
         await message.answer("Пожалуйста, отправьте файл с расширением .docx")
         return
     if not await check_file_size(message):
@@ -97,13 +97,13 @@ async def handle_docx_file(message: Message, state: FSMContext):
     await state.update_data(file=message.document)
 
     data = await state.get_data()
-    logger.info(f"Пользователь {message.from_user.id} отправил файл {message.document.file_name}")
+    logger.info(f"Пользователь {message.from_user.username} отправил файл {message.document.file_name}")
 
     if "doc_type" in data:
         file_obj = await message.bot.get_file(data["file"].file_id)
         file = await message.bot.download_file(file_obj.file_path)
 
-        logger.info(f"Началась проверка docx файла {data['file'].file_name} для пользователя {message.from_user.id}")
+        logger.info(f"Началась проверка docx файла {data['file'].file_name} для пользователя {message.from_user.username}")
         await message.answer("⏳ Проверка документа началась, подождите немного...")
 
         result = validate_docx_document(file, data["file"].file_name, data["doc_type"])
@@ -113,14 +113,14 @@ async def handle_docx_file(message: Message, state: FSMContext):
             logger.error(f"Ошибка при проверке docx: {r}")
             await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
         else:
-            logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
+            logger.info(f"Проверка docx завершена для пользователя {message.from_user.username}")
             save_check_result(
                 user_id=message.from_user.id,
                 doc_type=data["doc_type"],
                 check_type="docx",
                 result=bool(result['valid'])
             )
-            logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
+            logger.debug(f"Проверка latex по пользователю {message.from_user.username} записана в таблицу users_checks")
             res = format_docx_validation_result(result)
             # await message.answer(res, parse_mode="Markdown")
             await send_long_message(message, res)
@@ -141,16 +141,16 @@ async def handle_docx_file(message: Message, state: FSMContext):
 @router.message(DocxCheck.waiting_for_type)
 async def handle_docx_type(message: Message, state: FSMContext):
     if await is_state_expired(state):
-        logger.info(f"Сессия истекла для пользователя {message.from_user.id}")
+        logger.info(f"Сессия истекла для пользователя {message.from_user.username}")
         await message.answer(
             "⌛ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
         await state.clear()
         return
 
     doc_type = message.text.strip().lower().replace(" ", "_")
-    logger.debug(f"Пользователь {message.from_user.id} ввёл тип документа docx: {doc_type}")
+    logger.debug(f"Пользователь {message.from_user.username} ввёл тип документа docx: {doc_type}")
     if doc_type not in VALID_TYPES:
-        logger.warning(f"Пользователь {message.from_user.id} указал неверный тип docx: {doc_type}")
+        logger.warning(f"Пользователь {message.from_user.username} указал неверный тип docx: {doc_type}")
         await message.answer(f"Неверный тип документа. Возможные типы: {get_valid_types_str()}.")
         return
 
@@ -158,7 +158,7 @@ async def handle_docx_type(message: Message, state: FSMContext):
     file_obj = await message.bot.get_file(data["file"].file_id)
     file = await message.bot.download_file(file_obj.file_path)
 
-    logger.info(f"Началась проверка docx файла {data['file'].file_name} для пользователя {message.from_user.id}")
+    logger.info(f"Началась проверка docx файла {data['file'].file_name} для пользователя {message.from_user.username}")
     await message.answer("⏳ Проверка документа началась, подождите немного...")
 
     result = validate_docx_document(file, data["file"].file_name, doc_type)
@@ -168,14 +168,14 @@ async def handle_docx_type(message: Message, state: FSMContext):
         logger.error(f"Ошибка при проверке docx: {r}")
         await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
     else:
-        logger.info(f"Проверка docx завершена для пользователя {message.from_user.id}")
+        logger.info(f"Проверка docx завершена для пользователя {message.from_user.username}")
         save_check_result(
             user_id=message.from_user.id,
             doc_type=doc_type,
             check_type="docx",
             result=bool(result['valid'])
         )
-        logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
+        logger.debug(f"Проверка latex по пользователю {message.from_user.username} записана в таблицу users_checks")
         res = format_docx_validation_result(result)
         # await message.answer(res, parse_mode="Markdown")
         await send_long_message(message, res)
@@ -193,9 +193,9 @@ async def handle_latex_check(message: Message, state: FSMContext):
     parts = message.text.split(maxsplit=1)
     if len(parts) >= 2:
         doc_type = parts[1].strip().lower().replace(" ", "_")
-        logger.debug(f"Пользователь {message.from_user.id} ввел тип документа LaTeX: {doc_type}")
+        logger.debug(f"Пользователь {message.from_user.username} ввел тип документа LaTeX: {doc_type}")
         if doc_type not in VALID_TYPES:
-            logger.warning(f"Пользователь {message.from_user.id} ввел недопустимый тип LaTeX: {doc_type}")
+            logger.warning(f"Пользователь {message.from_user.username} ввел недопустимый тип LaTeX: {doc_type}")
             await message.answer(
                 f"❌ Неизвестный тип документа: {doc_type}.\n"
                 f"✅ Возможные типы: {get_valid_types_str()}.\n"
@@ -215,14 +215,14 @@ async def handle_latex_check(message: Message, state: FSMContext):
 @router.message(LatexCheck.waiting_for_tex, F.document)
 async def handle_latex_tex(message: Message, state: FSMContext):
     if await is_state_expired(state):
-        logger.info(f"Сессия истекла для пользователя {message.from_user.id} (этап .tex)")
+        logger.info(f"Сессия истекла для пользователя {message.from_user.username} (этап .tex)")
         await message.answer(
             "⌛ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
         await state.clear()
         return
 
     if not message.document.file_name.endswith(".tex"):
-        logger.warning(f"Пользователь {message.from_user.id} отправил не .tex файл: {message.document.file_name}")
+        logger.warning(f"Пользователь {message.from_user.username} отправил не .tex файл: {message.document.file_name}")
         await message.answer("Пожалуйста, отправьте файл с расширением .tex")
         return
     if not await check_file_size(message):
@@ -237,14 +237,14 @@ async def handle_latex_tex(message: Message, state: FSMContext):
 @router.message(LatexCheck.waiting_for_sty, F.document)
 async def handle_latex_sty(message: Message, state: FSMContext):
     if await is_state_expired(state):
-        logger.info(f"Сессия истекла для пользователя {message.from_user.id} (этап .sty)")
+        logger.info(f"Сессия истекла для пользователя {message.from_user.username} (этап .sty)")
         await message.answer(
             "⌛ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
         await state.clear()
         return
 
     if not message.document.file_name.endswith(".sty"):
-        logger.warning(f"Пользователь {message.from_user.id} отправил не .sty файл: {message.document.file_name}")
+        logger.warning(f"Пользователь {message.from_user.username} отправил не .sty файл: {message.document.file_name}")
         await message.answer("Пожалуйста, отправьте файл с расширением .sty")
         return
     if not await check_file_size(message):
@@ -264,16 +264,16 @@ async def handle_latex_sty(message: Message, state: FSMContext):
 @router.message(LatexCheck.waiting_for_type)
 async def handle_latex_type(message: Message, state: FSMContext):
     if await is_state_expired(state):
-        logger.info(f"Сессия истекла для пользователя {message.from_user.id} (этап выбора типа для latex)")
+        logger.info(f"Сессия истекла для пользователя {message.from_user.username} (этап выбора типа для latex)")
         await message.answer(
             "⌛ Слишком долго не было ответа. Начните проверку заново командой /check_docx или /check_latex.")
         await state.clear()
         return
 
     doc_type = message.text.strip().lower().replace(" ", "_")
-    logger.debug(f"Пользователь {message.from_user.id} ввел тип LaTeX-документа: {doc_type}")
+    logger.debug(f"Пользователь {message.from_user.username} ввел тип LaTeX-документа: {doc_type}")
     if doc_type not in VALID_TYPES:
-        logger.warning(f"Пользователь {message.from_user.id} указал недопустимый тип документа LaTeX: {doc_type}")
+        logger.warning(f"Пользователь {message.from_user.username} указал недопустимый тип документа LaTeX: {doc_type}")
         await message.answer(f"Неверный тип документа. Возможные типы: {get_valid_types_str()}.")
         return
     await state.update_data(doc_type=doc_type)
@@ -288,7 +288,7 @@ async def process_latex_validation(message: Message, state: FSMContext):
     sty_file_info = await message.bot.get_file(data["sty"].file_id)
     sty_file = await message.bot.download_file(sty_file_info.file_path)
 
-    logger.info(f"Началась проверка LaTeX-документов для пользователя {message.from_user.id}")
+    logger.info(f"Началась проверка LaTeX-документов для пользователя {message.from_user.username}")
     await message.answer("⏳ Проверка документа началась, подождите немного...")
 
     result = validate_latex_document(
@@ -302,14 +302,14 @@ async def process_latex_validation(message: Message, state: FSMContext):
         logger.error(f"Ошибка при проверке latex: {r}")
         await message.answer(f"❌ Произошла ошибка при проверке документа: {r}")
     else:
-        logger.info(f"Проверка latex завершена для пользователя {message.from_user.id}")
+        logger.info(f"Проверка latex завершена для пользователя {message.from_user.username}")
         save_check_result(
             user_id=message.from_user.id,
             doc_type=data["doc_type"],
             check_type="latex",
             result=bool(result['valid'])
         )
-        logger.debug(f"Проверка latex по пользователю {message.from_user.id} записана в таблицу users_checks")
+        logger.debug(f"Проверка latex по пользователю {message.from_user.username} записана в таблицу users_checks")
         res = format_latex_validation_result(result)
         await send_long_message(message, res)
         logger.debug(f"Проверка docx завершена для пользователя {message.from_user.username} c результатом {res}")
