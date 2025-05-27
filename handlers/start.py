@@ -40,7 +40,7 @@ def get_available_commands(role: str) -> list[str]:
 async def start(message: types.Message):
     user_id = message.from_user.id
     role = get_user_role(user_id, message.from_user.username)
-    logger.info(f"👤 Пользователь {user_id} начал сессию как {role}.")
+    logger.info(f"👤 Пользователь {message.from_user.username} начал сессию как {role}.")
 
     commands = get_available_commands(role)
 
@@ -67,7 +67,7 @@ async def set_reviewer(message: types.Message):
     if secret == SECRET_CODE:
         user_id = message.from_user.id
         set_user_role(user_id, REVIEWER_ROLE)
-        logger.info(f"✅ Пользователю {user_id} присвоена роль: reviewer")
+        logger.info(f"✅ Пользователю {message.from_user.username} присвоена роль: reviewer")
 
         commands = get_available_commands(REVIEWER_ROLE)
         await message.answer(
@@ -136,7 +136,7 @@ async def info(message: types.Message):
 async def reset_role(message: types.Message):
     user_id = message.from_user.id
     set_user_role(user_id, STUDENT_ROLE)
-    logger.info(f"🔄 Пользователю {user_id} сброшена роль до student.")
+    logger.info(f"🔄 Пользователю {message.from_user.username} сброшена роль до student.")
     await message.answer("Ваша роль сброшена до 'student'. Вы больше не нормоконтролер.")
 
 
@@ -152,7 +152,7 @@ async def feedback(message: types.Message):
     feedback_text = text_parts[1]
 
     # Логирование
-    logger.feedback(f"✉️ Отзыв от {user_id}: {feedback_text}")
+    logger.feedback(f"✉️ Отзыв от {message.from_user.username}: {feedback_text}")
 
     # Отправка админу
     try:
@@ -172,7 +172,7 @@ async def recent_checks(message: types.Message):
     role = get_user_role(user_id)
 
     if role != REVIEWER_ROLE:
-        logger.warning(f"Пользователь {user_id} попытался использовать команду recent_checks.")
+        logger.warning(f"Пользователь {message.from_user.username} попытался использовать команду recent_checks.")
         await message.answer("⛔️ Эта команда доступна только нормоконтролёрам.")
         return
 

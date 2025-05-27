@@ -35,7 +35,7 @@ async def is_state_expired(state: FSMContext) -> bool:
 
 @router.message(Command("types"))
 async def available_types(message: types.Message):
-    logger.debug(f"Пользователь {message.from_user.id} запросил типы документов")
+    logger.debug(f"Пользователь {message.from_user.username} запросил типы документов")
     options = get_doc_options()
     if options:
         text = "\n".join(opt["name"].lower().replace("_", "\\_") for opt in options)
@@ -85,7 +85,7 @@ async def process_doc_type_internal(message: types.Message, doc_type: str, state
 
 
 async def send_rules(message: types.Message, doc_type: str):
-    logger.debug(f"Пользователь {message.from_user.id} запросил правила для {doc_type}")
+    logger.debug(f"Пользователь {message.from_user.username} запросил правила для {doc_type}")
     rules = get_rules(doc_type)
 
     if not rules:
@@ -174,7 +174,7 @@ async def update_rule(message: types.Message):
     user_id = message.from_user.id
     role = get_user_role(user_id)
     if role != REVIEWER_ROLE:
-        logger.warning(f"Пользователь {user_id} попытался изменить правило без прав.")
+        logger.warning(f"Пользователь {message.from_user.username} попытался изменить правило без прав.")
         await message.answer("🚫 У вас нет прав для изменения правил.")
         return
 
@@ -188,7 +188,7 @@ async def update_rule(message: types.Message):
     # new_value = parts[3]
     doc_type, rule_key, new_value = parts[1], parts[2], " ".join(parts[3:])
 
-    logger.debug(f"Нормоконтролер {user_id} меняет правило {rule_key} для {doc_type} на {new_value}")
+    logger.debug(f"Нормоконтролер {message.from_user.username} меняет правило {rule_key} для {doc_type} на {new_value}")
     result = change_rule(doc_type, rule_key, new_value)
     if result:
         await message.answer(result.get("message", "✅ Правило изменено."))
@@ -201,7 +201,7 @@ async def handle_change_rule_for_all(message: types.Message):
     user_id = message.from_user.id
     role = get_user_role(user_id)
     if role != REVIEWER_ROLE:
-        logger.warning(f"Пользователь {user_id} попытался изменить правило без прав.")
+        logger.warning(f"Пользователь {message.from_user.username} попытался изменить правило без прав.")
         await message.answer("🚫 У вас нет прав для изменения правил.")
         return
 
