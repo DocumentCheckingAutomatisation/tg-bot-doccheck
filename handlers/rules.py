@@ -100,16 +100,25 @@ async def send_rules(message: types.Message, doc_type: str):
     else:
         pretty_rules = format_rules_for_students(rules)
 
+    # Добавляем ссылки
+    links = (
+        "\n\n🔗 *Полезные ссылки:*\n"
+        "• [LaTeX шаблон с верным оформлением для ИГУ](https://github.com/Alyona1619/LaTeXTemplate)\n"
+        "• [Документ с правилами оформления ИГУ](https://docs.google.com/document/d/1u4fIvEEHkwORaAj1kNBk3aBlEca7_pJ7/edit?usp=drive_link&ouid=115137208764228085296&rtpof=true&sd=true)"
+    )
+
+    pretty_rules += links
     max_length = 4000
 
     if len(pretty_rules) > max_length:
         chunks = [pretty_rules[i:i + max_length] for i in range(0, len(pretty_rules), max_length)]
         await message.answer(f"*Правила для типа:* `{doc_type}`", parse_mode="Markdown")
         for chunk in chunks:
-            await message.answer(f"```\n{chunk}\n```", parse_mode="Markdown")
+            await message.answer(f"```\n{chunk}\n```" if not chunk.startswith("🔗") else chunk, parse_mode="Markdown")
     else:
         await message.answer(
-            f"*Правила для типа:* `{doc_type}`\n```\n{pretty_rules}\n```",
+            f"*Правила для типа:* `{doc_type}`\n```\n{pretty_rules}\n```" if not pretty_rules.endswith(")")
+            else f"*Правила для типа:* `{doc_type}`\n{pretty_rules}",
             parse_mode="Markdown"
         )
 
@@ -158,13 +167,15 @@ def format_rules_for_students(rules: dict) -> str:
         if "section" in design:
             parts.append("• Разделы: заголовки слева, полужирные, 14 пт")
         if "subsection" in design:
-            parts.append("• Подразделы: заголовки слева, обычные, 14 пт")
+            parts.append("• Подразделы: заголовки слева, обычные, 14 пт, без точки")
         if "list" in design:
             parts.append("• Списки: могут быть нумерованными цифрой (1) или буквой (а) или маркированными (-)")
         if "table" in design:
-            parts.append("• Таблицы: подписи по центру, ссылки вида '(табл. 1.1)'")
+            parts.append("• Таблицы: подписи 'Таблица 1' справа, подписи названия по центру, ссылки вида '(табл. 1.1)'")
         if "picture" in design:
             parts.append("• Рисунки: подписи по центру, ссылки вида '(рис. 1.1)'")
+        if "quotes" in design:
+            parts.append("• Кавычки: основные: «», вложенные: „“")
 
     return "\n".join(parts)
 

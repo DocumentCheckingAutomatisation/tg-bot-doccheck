@@ -181,7 +181,7 @@ async def recent_checks(message: types.Message):
         await message.answer("За последние 14 дней не было проверок.")
         return
 
-    text = "📄 <b>Последние проверки за 14 дней:</b>\n\n"
+    text = "📄 <b>Последние проверки за 14 дней:</b>\n"
     current_type = None
 
     for username, doc_type, check_type, result, check_time in checks:
