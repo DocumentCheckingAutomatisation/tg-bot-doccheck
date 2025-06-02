@@ -250,7 +250,7 @@ def format_docx_validation_result(result: dict) -> str:
     errors_text = format_errors(result.get("errors", []))
 
     return (
-        f"📋 <b>Результат проверки LaTeX-документа</b>\n\n"
+        f"📋 <b>Результат проверки DOCX-документа</b>\n\n"
         f"💬 <u><b>Правильное оформление:</b></u> {valid}\n\n"
         f"🔎 <u><b>Детали проверки:</b></u>\n{check_results}\n"
         f"⚠️ <u><b>Обнаруженные ошибки:</b></u>\n\n{errors_text}"
